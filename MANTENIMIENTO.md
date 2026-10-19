@@ -141,7 +141,22 @@ no importa ese paquete y solo aparece porque el módulo `x/crypto` está en el g
   - registro cerrado;
   - captcha a partir del 3.er intento fallido.
 
+### Publicación y prueba en el ambiente
+
+- Imagen `ghcr.io/adbeels/rustdesk-api:v2.7-adbeels.1`, digest
+  `sha256:a9c11a59c699a3f26c4afefc10145d5e10348ca77cf5cc6146eb33a3ccc42be9`. Pesa ~25 MB; la oficial v2.7, 99 MB.
+- 2026-10-18 18:40: desplegada en el ambiente de pruebas (pos-server, `rustdesk-pruebas`) en lugar de la v2.7,
+  con respaldo previo.
+- Verificado:
+  - consola 200 y carga;
+  - latidos de los 2 equipos;
+  - logs sin errores;
+  - un cliente 1.5.0 con sesión de usuario sigue viendo su libreta compartida.
+
 ### Pendiente (no se hizo en esta ronda)
+
+- sqlite usa el modo de journal por omisión. En el disco mecánico de pruebas gorm marca a veces «SLOW SQL >= 1s» en el
+  `UPDATE peers` del latido. Si se repite en el VPS, evaluar el modo WAL (`_journal_mode=WAL`).
 
 - `go-redis/redis/v8` está en su última v8 (v8.11.5), pero el proyecto pasó a `redis/go-redis/v9`. Solo se usa
   si `cache.type: redis`; aquí no.
