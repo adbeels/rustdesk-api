@@ -8,7 +8,7 @@
 FROM node:24.22.0-alpine3.24@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed4a8602e937f AS consola
 ARG WEB_REPO=https://github.com/adbeels/rustdesk-api-web.git
 # Dependencias al día (npm audit 0) y sin cliente web. La de la v2.7 oficial era lejianwen 3998c2a9213f
-ARG WEB_COMMIT=cb0eb511dd3a6af90c5fe38c244187ded33cf284
+ARG WEB_COMMIT=117aef20570ff9de5a32b0389f02822552f253ad
 RUN apk add --no-cache git
 WORKDIR /web
 RUN git init -q \
@@ -30,8 +30,6 @@ ARG VERSION=dev
 RUN go build -trimpath -ldflags "-s -w -linkmode external -extldflags -static" -o /release/apimain ./cmd/apimain.go \
  && mkdir -p /release/data /release/runtime \
  && cp -r resources docs conf /release/ \
- # El cliente web quedó fuera del proyecto por DMCA: no se incluye en la imagen
- && rm -rf /release/resources/web /release/resources/web2 \
  && echo "$VERSION" > /release/resources/version
 COPY --from=consola /web/dist /release/resources/admin
 

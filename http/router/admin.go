@@ -42,10 +42,8 @@ func Init(g *gin.Engine) {
 	//deprecated by ConfigBind
 	//rs := &admin.Rustdesk{}
 	//adg.GET("/server-config", rs.ServerConfig)
-	//adg.GET("/app-config", rs.AppConfig)
 	//deprecated end
 
-	ShareRecordBind(adg)
 	MyBind(adg)
 
 	RustdeskCmdBind(adg)
@@ -134,10 +132,6 @@ func AddressBookBind(rg *gin.RouterGroup) {
 	aR := rg.Group("/address_book")
 	{
 		cont := &admin.AddressBook{}
-		// Fork adbeels: los enlaces solo sirven con el cliente web, que viene apagado (retirado por DMCA)
-		if global.Config.App.WebClient == 1 {
-			aR.POST("/shareByWebClient", cont.ShareByWebClient)
-		}
 
 		arp := aR.Use(middleware.AdminPrivilege())
 		arp.GET("/list", cont.List)
@@ -243,7 +237,6 @@ func ConfigBind(rg *gin.RouterGroup) {
 
 	aR.Use(middleware.BackendUserAuth())
 	aR.GET("/server", rs.ServerConfig)
-	aR.GET("/app", rs.AppConfig)
 
 }
 
@@ -261,12 +254,6 @@ func FileBind(rg *gin.RouterGroup) {
 }*/
 
 func MyBind(rg *gin.RouterGroup) {
-	{
-		cont := &my.ShareRecord{}
-		rg.GET("/my/share_record/list", cont.List)
-		rg.POST("/my/share_record/delete", cont.Delete)
-		rg.POST("/my/share_record/batchDelete", cont.BatchDelete)
-	}
 
 	{
 		cont := &my.AddressBook{}
@@ -313,15 +300,4 @@ func MyBind(rg *gin.RouterGroup) {
 		rg.POST("/my/login_log/delete", cont.Delete)
 		rg.POST("/my/login_log/batchDelete", cont.BatchDelete)
 	}
-}
-
-func ShareRecordBind(rg *gin.RouterGroup) {
-	aR := rg.Group("/share_record").Use(middleware.AdminPrivilege())
-	{
-		cont := &admin.ShareRecord{}
-		aR.GET("/list", cont.List)
-		aR.POST("/delete", cont.Delete)
-		aR.POST("/batchDelete", cont.BatchDelete)
-	}
-
 }

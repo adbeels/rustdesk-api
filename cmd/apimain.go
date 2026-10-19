@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"github.com/lejianwen/rustdesk-api/v2/config"
 	"github.com/lejianwen/rustdesk-api/v2/global"
 	"github.com/lejianwen/rustdesk-api/v2/http"
@@ -20,6 +19,7 @@ import (
 	"github.com/lejianwen/rustdesk-api/v2/service"
 	"github.com/lejianwen/rustdesk-api/v2/utils"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/redis/go-redis/v9"
 	"github.com/spf13/cobra"
 )
 
@@ -299,7 +299,6 @@ func Migrate(version uint) {
 		&model.UserThird{},
 		&model.Oauth{},
 		&model.LoginLog{},
-		&model.ShareRecord{},
 		&model.AuditConn{},
 		&model.AuditFile{},
 		&model.AddressBookCollection{},

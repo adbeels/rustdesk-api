@@ -20,7 +20,6 @@ type Service struct {
 	*OauthService
 	*LoginLogService
 	*AuditService
-	*ShareRecordService
 	*ServerCmdService
 	*LdapService
 	*AppService
