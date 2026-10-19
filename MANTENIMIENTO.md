@@ -1,0 +1,152 @@
+# Mantenimiento del fork adbeels/rustdesk-api
+
+Fork de [lejianwen/rustdesk-api](https://github.com/lejianwen/rustdesk-api) (licencia MIT, crédito a lejianwen).
+Upstream no tiene commits desde el 2025-09-29 (v2.7) y sus dependencias se quedaron viejas. Este fork las
+mantiene al día porque la API va a correr expuesta a Internet y controla los equipos de soporte.
+
+Reglas del fork:
+- **No se reintroduce el cliente web** (`webclient`/`webclient2`, retirado por DMCA). La imagen no incluye
+  `resources/web` y `app.web-client` está en `0` por omisión.
+- Imagen con **etiqueta fija** `vX.Y-adbeels.N` en `ghcr.io/adbeels/rustdesk-api`. Nunca `latest`.
+- Sin secretos en el repo.
+
+## Cómo se construye y se publica
+
+| Pieza | Dónde |
+|---|---|
+| Imagen | `Dockerfile.adbeels`: multietapa, construye la consola y la API; bases fijadas por versión y digest |
+| Consola web | `lejianwen/rustdesk-api-web`, commit `3998c2a9213f` (2025-08-31), el mismo que trae la v2.7 oficial (`npm ci`) |
+| CI | `.github/workflows/imagen.yml`: `go vet`, pruebas, `govulncheck` (si encuentra algo, no publica) y la imagen |
+| Publicar | `git tag v2.7-adbeels.N && git push origin v2.7-adbeels.N` → `ghcr.io/adbeels/rustdesk-api:v2.7-adbeels.N` |
+
+- En PR y a mano (`workflow_dispatch`) el workflow construye la imagen pero **no la publica**.
+- Se quitaron los workflows de upstream (`build.yml`, `build_test.yml`):
+  - publicaban `latest` y pedían secretos de Docker Hub;
+  - bajaban toolchains de un sitio de terceros (`musl.ljw.red`);
+  - su disparador `v*.*.*` también atrapa las etiquetas del fork.
+- `go.sum` ahora se versiona. Upstream lo ignoraba y lo regeneraba en cada build con `go mod tidy`.
+
+**Para medir localmente sin Go instalado** (en pos-server, contenedor efímero; revisa antes `srv quien` y la RAM):
+
+```bash
+docker run --rm -v "$PWD":/src -w /src golang:1.27.2-bookworm sh -c 'go install golang.org/x/vuln/cmd/govulncheck@v1.9.0 && /go/bin/govulncheck ./...'
+```
+
+## 2026-10-18 · Línea base y primera actualización (`v2.7-adbeels.1`)
+
+Herramientas: govulncheck v1.9.0, base de vulnerabilidades del 2026-10-08. Contenedor efímero
+`golang:1.27.2-bookworm` en pos-server (en la laptop no hay Go ni Docker).
+
+### Antes
+
+Se midió de dos formas:
+- **Modo binario**: sobre el `apimain` de la imagen oficial `lejianwen/rustdesk-api:v2.7`, que es lo que corre
+  hoy en pruebas. Cuenta todo símbolo vulnerable presente en el binario, se llame o no.
+- **Modo fuente**: sobre el código de v2.7 con su toolchain original (go1.23.12). Solo cuenta lo que el código
+  **sí llama**, según el grafo de llamadas.
+
+| Origen | Go | Vulnerabilidades alcanzables | Solo importadas o requeridas |
+|---|---|---|---|
+| Binario de la imagen v2.7 | go1.23.12 | **110** | — |
+| Código v2.7 (fuente) | go1.23.12 | **55** | 57 |
+
+**Por módulo:**
+
+| Módulo | Binario | Fuente |
+|---|---|---|
+| stdlib (Go 1.23.12, sin soporte desde 2025-08) | 57 | 47 |
+| golang.org/x/crypto v0.33.0 | 21 | 0 |
+| golang.org/x/net v0.34.0 | 10 | 2 |
+| golang.org/x/image v0.13.0 (vía base64Captcha) | 10 | 0 |
+| github.com/jackc/pgx/v5 v5.6.0 | 3 | 1 |
+| golang.org/x/text v0.22.0 | 2 | 2 |
+| github.com/go-jose/go-jose/v4 v4.0.2 | 2 | 1 |
+| github.com/sirupsen/logrus v1.8.1 | 1 | 1 |
+| github.com/golang-jwt/jwt/v5 v5.2.1 | 1 | 1 |
+| github.com/gin-gonic/gin v1.9.0 | 1 | 0 |
+| golang.org/x/oauth2 v0.23.0 | 1 | 0 |
+| github.com/Azure/go-ntlmssp (vía ldap) | 1 | 0 |
+
+**Las más relevantes para un servidor expuesto** (alcanzables desde el código):
+- **net/http**: desincronización HTTP/1 tras CONNECT (GO-2026-6613), agotamiento de memoria por cookies,
+  `Range` y trailers HTTP/2 (GO-2025-4012, GO-2026-6609, GO-2026-6603) y CPU por ventanas HTTP/2 (GO-2026-6611).
+- **crypto/tls y crypto/x509**: reanudación de sesión inesperada (GO-2026-4337), KeyUpdate sin autenticar
+  (GO-2026-4870) y varias de complejidad cuadrática al validar certificados.
+- **html/template**: cinco fallos de escape que permiten XSS (GO-2026-4865, -4980, -4982, -6091, -6599).
+- **golang-jwt** v5.2.1: asignación excesiva de memoria al leer el encabezado del token (GO-2025-3553).
+- **pgx** v5.6.0: inyección SQL con literales `$$` (GO-2026-5004). Solo aplica con PostgreSQL; aquí usamos sqlite.
+
+**Directas desactualizadas** (`go list -m -u`):
+
+| Módulo | Tenía | Última |
+|---|---|---|
+| github.com/BurntSushi/toml | v1.3.2 | v1.6.0 |
+| github.com/coreos/go-oidc/v3 | v3.12.0 | v3.21.0 |
+| github.com/gin-gonic/gin | v1.9.0 | v1.12.0 |
+| github.com/go-ldap/ldap/v3 | v3.4.10 | v3.4.15 |
+| github.com/go-playground/locales | v0.14.1 | v0.14.2 |
+| github.com/go-playground/universal-translator | v0.18.1 | v0.18.2 |
+| github.com/go-playground/validator/v10 | v10.26.0 | v10.30.5 |
+| github.com/go-redis/redis/v8 | v8.11.4 | v8.11.5 |
+| github.com/golang-jwt/jwt/v5 | v5.2.1 | v5.3.1 |
+| github.com/mojocn/base64Captcha | v1.3.6 | v1.3.8 |
+| github.com/nicksnyder/go-i18n/v2 | v2.4.0 | v2.6.1 |
+| github.com/sirupsen/logrus | v1.8.1 | v1.10.2 |
+| github.com/spf13/cobra | v1.8.1 | v1.10.2 |
+| github.com/spf13/viper | v1.9.0 | v1.21.0 |
+| github.com/swaggo/gin-swagger | v1.6.0 | v1.6.1 |
+| github.com/swaggo/swag | v1.16.3 | v1.16.6 |
+| golang.org/x/crypto | v0.33.0 | v0.58.0 |
+| golang.org/x/oauth2 | v0.23.0 | v0.37.0 |
+| golang.org/x/text | v0.22.0 | v0.43.0 |
+| gorm.io/driver/mysql | v1.5.7 | v1.6.0 |
+| gorm.io/driver/postgres | v1.6.0 | v1.6.3 |
+| gorm.io/driver/sqlite | v1.5.6 | v1.6.0 |
+| gorm.io/gorm | v1.25.10 | v1.31.2 |
+
+Al día ya estaban: google/uuid v1.6.0, swaggo/files v1.0.1 y antonfisher/nested-logrus-formatter v1.3.1.
+Sin versiones nuevas: fvbock/endless (2017).
+
+### Qué se cambió
+
+- **Go**: `go 1.26.0`, `toolchain go1.27.2`. Las dos versiones con soporte al 2026-10-18 son 1.27.2 y 1.26.9.
+- **Dependencias**: `go get -u` de todas las directas y `go mod tidy`; quedaron en las versiones de la columna
+  «Última». De paso subieron las indirectas, p. ej. x/net v0.61.0, x/image v0.47.0, pgx v5.11.0,
+  go-jose v4.1.4 y mattn/go-sqlite3 v1.14.52.
+- **Código**: no hizo falta cambiar nada para compilar. `go vet` con Go ≥ 1.24 marcó 12 `t.Fatalf` con formato
+  no constante en las pruebas de `lib/cache`; se cambiaron por `t.Fatal`.
+- `conf/config.yaml`: `app.web-client` pasa de `1` a `0`.
+
+### Después
+
+| Origen | Go | Vulnerabilidades alcanzables | Solo importadas o requeridas |
+|---|---|---|---|
+| Código actualizado (fuente) | go1.27.2 | **0** | 1 |
+| Binario nuevo | go1.27.2 | **0** | 1 |
+
+La única que queda es GO-2026-5932: `golang.org/x/crypto/openpgp` está abandonado. No tiene arreglo, el código
+no importa ese paquete y solo aparece porque el módulo `x/crypto` está en el grafo.
+
+### Pruebas
+
+- `go build`: ✅. `go vet ./...`: ✅.
+- `go test -skip Redis ./...`: ✅ (cache, jwt, lock, service, utils).
+  - Las 5 pruebas de Redis fallan **igual que en upstream**: apuntan a un Redis fijo del autor (`192.168.1.168:6379`).
+- **Paridad con v2.7**: binario nuevo y binario de la imagen v2.7 sobre una **copia** de la base de pruebas,
+  con la misma configuración que el ambiente (sin red, en contenedor efímero). Las 16 sondas dieron la misma
+  respuesta en los dos:
+  - `/api/version`, `login-options` de cliente y consola, `config/admin`;
+  - 401/403 sin sesión;
+  - sin `/webclient` ni `/webclient2`;
+  - registro cerrado;
+  - captcha a partir del 3.er intento fallido.
+
+### Pendiente (no se hizo en esta ronda)
+
+- `go-redis/redis/v8` está en su última v8 (v8.11.5), pero el proyecto pasó a `redis/go-redis/v9`. Solo se usa
+  si `cache.type: redis`; aquí no.
+- `fvbock/endless` (reinicio en caliente) está abandonado desde 2017. Evaluar quitarlo.
+- La imagen corre como root, igual que upstream. Evaluar un usuario sin privilegios: hay que cuidar los permisos
+  del volumen `/app/data`.
+- Fase 2: la consola (`rustdesk-api-web`) con `npm audit` y sus dependencias. Su `src/utils/webclient` es solo el
+  código para compartir ligas del cliente web; viene así desde el commit fijado.
