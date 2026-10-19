@@ -224,3 +224,52 @@ no importa ese paquete y solo aparece porque el módulo `x/crypto` está en el g
   - logs limpios;
   - consola con iconos y llave, sin botones del cliente web;
   - libreta compartida y conexión desde el cliente 1.5.0.
+
+## 2026-10-18 · Ronda 3: limpieza del cliente web (`v2.7-adbeels.4`)
+
+**API**
+- **Fuera todo el cliente web.**
+  - Rutas: `/api/shared-peer`, `/api/server-config`, `/api/server-config-v2`, `/webclient-config/index.js`,
+    `/webclient/` y `/webclient2/`.
+  - También su controlador y sus respuestas, `resources/web` (cliente web v1, 16 MB, 140 archivos) y
+    `.gitattributes`.
+- **Fuera los «registros compartidos»** (`/api/admin/share_record/*`, `/api/admin/my/share_record/*` y
+  `/api/admin/address_book/shareByWebClient`): controladores, servicio, formulario, modelo y rutas.
+  - Guardaban la **contraseña de los equipos compartidos en texto plano** (`share_records.password`) y solo
+    servían a `/api/shared-peer`.
+  - La tabla `share_records` ya no se migra: **un servidor nuevo no la crea**. En una base existente se queda
+    como está, sin borrarse sola. En pruebas tenía 0 filas.
+  - Si en una base vieja tuviera filas: `sqlite3 rustdeskapi.db "DROP TABLE share_records;"`, con respaldo previo.
+- Fuera `/api/admin/config/app`, que solo devolvía `web_client`, y los campos de config `app.web-client`,
+  `rustdesk.webclient-magic-queryonline` y `rustdesk.ws-host`.
+  - `RUSTDESK_API_APP_WEB_CLIENT` ya no hace nada. Se puede dejar en el compose para poder regresar a una imagen
+    anterior.
+- Se quedan a propósito:
+  - la etiqueta `webclient` en los registros de login, que es un valor histórico;
+  - el mensaje de OIDC «Authorization in progress», que es genérico.
+- Docs de swagger regenerados con swag v1.16.6 (antes los generaba upstream con otra versión); gofmt.
+- `go vet` (Linux y Windows), pruebas y govulncheck: OK, 0 alcanzables.
+- Sondas sobre una copia de la base con `RUSTDESK_API_APP_WEB_CLIENT=1` forzado:
+  - las 10 rutas quitadas dan 404;
+  - las 7 de siempre responden igual.
+
+**Consola** (adbeels/rustdesk-api-web `117aef2`)
+- Fuera las vistas, la API y las rutas de registros compartidos, `getAppConfig`, imports sin uso y 19 claves de
+  i18n que solo usaba el cliente web.
+- Los iconos se registran de forma explícita: 18 en lugar de 293. El chunk de iconos baja de 240 a 102 kB.
+- Element Plus completo sigue siendo el chunk más grande: ~780 kB, ~230 kB gzip, y se cachea. Se subió
+  `chunkSizeWarningLimit` a 800 y se dejó escrita la razón. Bajarlo exigiría importarlo por componente
+  (unplugin-vue-components), y para una consola interna no lo vale.
+- `npm audit`: 0.
+
+**Publicación y prueba (`v2.7-adbeels.4`)**
+- Imagen `ghcr.io/adbeels/rustdesk-api:v2.7-adbeels.4`, digest
+  `sha256:5d66398b86d0446e2000757ec0566ff92c81615a8e4948bf3abdd8e1b9dcbda4`.
+- 21:48: desplegada en el ambiente de pruebas, con respaldo previo. Solo cambió la imagen.
+- Verificado:
+  - consola 200 y login sin errores de JavaScript;
+  - rutas quitadas en 404;
+  - más de una hora arriba sin reinicios ni errores, con latidos de los 2 equipos;
+  - el admin recorrió el menú (todos los iconos), dispositivos, libretas y reglas, usuarios, auditoría e idioma,
+    sin «Registros compartidos»;
+  - libreta compartida y conexión desde el cliente 1.5.0.

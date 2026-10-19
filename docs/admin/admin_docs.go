@@ -301,51 +301,6 @@ const docTemplateadmin = `{
                 }
             }
         },
-        "/admin/address_book/share": {
-            "post": {
-                "security": [
-                    {
-                        "token": []
-                    }
-                ],
-                "description": "地址簿分享",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "地址簿"
-                ],
-                "summary": "地址簿分享",
-                "parameters": [
-                    {
-                        "description": "地址簿信息",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/admin.ShareByWebClientForm"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/admin/address_book/update": {
             "post": {
                 "security": [
@@ -1339,40 +1294,6 @@ const docTemplateadmin = `{
                 }
             }
         },
-        "/admin/config/app": {
-            "get": {
-                "security": [
-                    {
-                        "token": []
-                    }
-                ],
-                "description": "APP服务配置",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "ADMIN"
-                ],
-                "summary": "APP服务配置",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/admin/config/server": {
             "get": {
                 "security": [
@@ -1380,7 +1301,7 @@ const docTemplateadmin = `{
                         "token": []
                     }
                 ],
-                "description": "服务配置,给webclient提供api-server",
+                "description": "服务配置",
                 "consumes": [
                     "application/json"
                 ],
@@ -3282,144 +3203,6 @@ const docTemplateadmin = `{
                 }
             }
         },
-        "/admin/my/share_record/batchDelete": {
-            "post": {
-                "security": [
-                    {
-                        "token": []
-                    }
-                ],
-                "description": "批量删除我的分享记录",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "我的"
-                ],
-                "summary": "批量删除我的分享记录",
-                "parameters": [
-                    {
-                        "description": "id",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/admin.PeerShareRecordBatchDeleteForm"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/admin/my/share_record/delete": {
-            "post": {
-                "security": [
-                    {
-                        "token": []
-                    }
-                ],
-                "description": "分享记录删除",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "我的分享记录"
-                ],
-                "summary": "分享记录删除",
-                "parameters": [
-                    {
-                        "description": "分享记录信息",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/admin.ShareRecordForm"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/admin/my/share_record/list": {
-            "get": {
-                "security": [
-                    {
-                        "token": []
-                    }
-                ],
-                "description": "分享记录列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "我的分享记录"
-                ],
-                "summary": "分享记录列表",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "页码",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "页大小",
-                        "name": "page_size",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/admin/my/tag/create": {
             "post": {
                 "security": [
@@ -4314,150 +4097,6 @@ const docTemplateadmin = `{
                                     }
                                 }
                             ]
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/admin/share_record/batchDelete": {
-            "post": {
-                "security": [
-                    {
-                        "token": []
-                    }
-                ],
-                "description": "批量分享记录",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "分享记录"
-                ],
-                "summary": "批量分享记录",
-                "parameters": [
-                    {
-                        "description": "id",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/admin.PeerShareRecordBatchDeleteForm"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/admin/share_record/delete": {
-            "post": {
-                "security": [
-                    {
-                        "token": []
-                    }
-                ],
-                "description": "分享记录删除",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "分享记录"
-                ],
-                "summary": "分享记录删除",
-                "parameters": [
-                    {
-                        "description": "分享记录信息",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/admin.ShareRecordForm"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/admin/share_record/list": {
-            "get": {
-                "security": [
-                    {
-                        "token": []
-                    }
-                ],
-                "description": "分享记录列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "分享记录"
-                ],
-                "summary": "分享记录列表",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "用户ID",
-                        "name": "user_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "页码",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "页大小",
-                        "name": "page_size",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
@@ -5621,6 +5260,9 @@ const docTemplateadmin = `{
         "admin.PeerForm": {
             "type": "object",
             "properties": {
+                "alias": {
+                    "type": "string"
+                },
                 "cpu": {
                     "type": "string"
                 },
@@ -5650,58 +5292,6 @@ const docTemplateadmin = `{
                 },
                 "version": {
                     "type": "string"
-                }
-            }
-        },
-        "admin.PeerShareRecordBatchDeleteForm": {
-            "type": "object",
-            "required": [
-                "ids"
-            ],
-            "properties": {
-                "ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
-        "admin.ShareByWebClientForm": {
-            "type": "object",
-            "required": [
-                "id",
-                "password",
-                "password_type"
-            ],
-            "properties": {
-                "expire": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "password_type": {
-                    "description": "只能是once,fixed",
-                    "type": "string",
-                    "enum": [
-                        "once",
-                        "fixed"
-                    ]
-                }
-            }
-        },
-        "admin.ShareRecordForm": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "user_id": {
-                    "type": "integer"
                 }
             }
         },
@@ -5755,6 +5345,9 @@ const docTemplateadmin = `{
                 },
                 "nickname": {
                     "description": "Password string           ` + "`" + `json:\"password\" validate:\"required,gte=4,lte=20\"` + "`" + `",
+                    "type": "string"
+                },
+                "remark": {
                     "type": "string"
                 },
                 "status": {
@@ -6263,6 +5856,7 @@ const docTemplateadmin = `{
             "type": "object",
             "properties": {
                 "auto_register": {
+                    "description": "RedirectUrl  string ` + "`" + `json:\"redirect_url\"` + "`" + `",
                     "type": "boolean"
                 },
                 "client_id": {
@@ -6323,6 +5917,9 @@ const docTemplateadmin = `{
         "model.Peer": {
             "type": "object",
             "properties": {
+                "alias": {
+                    "type": "string"
+                },
                 "cpu": {
                     "type": "string"
                 },
@@ -6403,6 +6000,10 @@ const docTemplateadmin = `{
                 "COMMON_STATUS_DISABLED": "通用状态 禁用",
                 "COMMON_STATUS_ENABLE": "通用状态 启用"
             },
+            "x-enum-descriptions": [
+                "通用状态 启用",
+                "通用状态 禁用"
+            ],
             "x-enum-varnames": [
                 "COMMON_STATUS_ENABLE",
                 "COMMON_STATUS_DISABLED"
@@ -6480,6 +6081,9 @@ const docTemplateadmin = `{
                     "type": "boolean"
                 },
                 "nickname": {
+                    "type": "string"
+                },
+                "remark": {
                     "type": "string"
                 },
                 "status": {

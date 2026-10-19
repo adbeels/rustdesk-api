@@ -16,7 +16,7 @@ type Config struct {
 // ServerConfig RUSTDESK服务配置
 // @Tags ADMIN
 // @Summary RUSTDESK服务配置
-// @Description 服务配置,给webclient提供api-server
+// @Description 服务配置
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} response.Response
@@ -31,22 +31,6 @@ func (co *Config) ServerConfig(c *gin.Context) {
 		ApiServer:   global.Config.Rustdesk.ApiServer,
 	}
 	response.Success(c, cf)
-}
-
-// AppConfig APP服务配置
-// @Tags ADMIN
-// @Summary APP服务配置
-// @Description APP服务配置
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} response.Response
-// @Failure 500 {object} response.Response
-// @Router /admin/config/app [get]
-// @Security token
-func (co *Config) AppConfig(c *gin.Context) {
-	response.Success(c, &gin.H{
-		"web_client": global.Config.App.WebClient,
-	})
 }
 
 // AdminConfig ADMIN服务配置
