@@ -165,3 +165,21 @@ no importa ese paquete y solo aparece porque el módulo `x/crypto` está en el g
   del volumen `/app/data`.
 - Fase 2: la consola (`rustdesk-api-web`) con `npm audit` y sus dependencias. Su `src/utils/webclient` es solo el
   código para compartir ligas del cliente web; viene así desde el commit fijado.
+
+## 2026-10-18 · Consola con dependencias al día (`v2.7-adbeels.2`)
+
+- La imagen construye la consola desde el fork **adbeels/rustdesk-api-web**, commit `18e92cd`.
+  - Detalle en el `MANTENIMIENTO.md` de ese repo.
+  - `npm audit`: **28 vulnerabilidades (2 críticas, 19 altas) → 0**. Antes, 12 estaban en el código que llega al
+    navegador, entre ellas `protobufjs` (crítica), que el código usaba sin declararla.
+  - vite 8.3.4, vue 3.5.44, pinia 4.1.0, vue-router 5.4.0, axios 1.20.0 y element-plus 2.14.7.
+  - Cambios de código mínimos: `defineStore('id', …)` y `minify: 'oxc'`.
+- La API no cambió respecto a `v2.7-adbeels.1`.
+- Imagen `ghcr.io/adbeels/rustdesk-api:v2.7-adbeels.2`, digest
+  `sha256:9f940c7eed09f2cab44c762954fe0c0b478d1cfb2b81f3e882ba714b68fff98b`.
+- Prueba en el ambiente (19:15, con respaldo previo):
+  - consola 200;
+  - login sin errores de JavaScript;
+  - el admin recorrió dispositivos, libretas y sus reglas, usuarios y grupos, auditoría y cambio de idioma: todo bien;
+  - latidos de los 2 equipos y logs sin errores;
+  - el cliente 1.5.0 con sesión de `soporte` sigue viendo su libreta compartida.
