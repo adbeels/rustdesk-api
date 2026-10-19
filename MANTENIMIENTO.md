@@ -261,3 +261,15 @@ no importa ese paquete y solo aparece porque el módulo `x/crypto` está en el g
   `chunkSizeWarningLimit` a 800 y se dejó escrita la razón. Bajarlo exigiría importarlo por componente
   (unplugin-vue-components), y para una consola interna no lo vale.
 - `npm audit`: 0.
+
+**Publicación y prueba (`v2.7-adbeels.4`)**
+- Imagen `ghcr.io/adbeels/rustdesk-api:v2.7-adbeels.4`, digest
+  `sha256:5d66398b86d0446e2000757ec0566ff92c81615a8e4948bf3abdd8e1b9dcbda4`.
+- 21:48: desplegada en el ambiente de pruebas, con respaldo previo. Solo cambió la imagen.
+- Verificado:
+  - consola 200 y login sin errores de JavaScript;
+  - rutas quitadas en 404;
+  - más de una hora arriba sin reinicios ni errores, con latidos de los 2 equipos;
+  - el admin recorrió el menú (todos los iconos), dispositivos, libretas y reglas, usuarios, auditoría e idioma,
+    sin «Registros compartidos»;
+  - libreta compartida y conexión desde el cliente 1.5.0.
