@@ -158,13 +158,8 @@ no importa ese paquete y solo aparece porque el módulo `x/crypto` está en el g
 - sqlite usa el modo de journal por omisión. En el disco mecánico de pruebas gorm marca a veces «SLOW SQL >= 1s» en el
   `UPDATE peers` del latido. Si se repite en el VPS, evaluar el modo WAL (`_journal_mode=WAL`).
 
-- `go-redis/redis/v8` está en su última v8 (v8.11.5), pero el proyecto pasó a `redis/go-redis/v9`. Solo se usa
-  si `cache.type: redis`; aquí no.
-- `fvbock/endless` (reinicio en caliente) está abandonado desde 2017. Evaluar quitarlo.
-- La imagen corre como root, igual que upstream. Evaluar un usuario sin privilegios: hay que cuidar los permisos
-  del volumen `/app/data`.
-- Fase 2: la consola (`rustdesk-api-web`) con `npm audit` y sus dependencias. Su `src/utils/webclient` es solo el
-  código para compartir ligas del cliente web; viene así desde el commit fijado.
+- ~~go-redis v8~~, ~~endless~~, ~~imagen como root~~: hechos en `v2.7-adbeels.3`.
+- ~~Fase 2: la consola~~: hecha en `v2.7-adbeels.2`.
 
 ## 2026-10-18 · Consola con dependencias al día (`v2.7-adbeels.2`)
 
@@ -183,3 +178,34 @@ no importa ese paquete y solo aparece porque el módulo `x/crypto` está en el g
   - el admin recorrió dispositivos, libretas y sus reglas, usuarios y grupos, auditoría y cambio de idioma: todo bien;
   - latidos de los 2 equipos y logs sin errores;
   - el cliente 1.5.0 con sesión de `soporte` sigue viendo su libreta compartida.
+
+## 2026-10-18 · Ronda 2 (`v2.7-adbeels.3`)
+
+**API**
+- `github.com/go-redis/redis/v8` → **`github.com/redis/go-redis/v9` v9.23.0**. Para Get/Set la API es la misma.
+  Las 5 pruebas de Redis pasan contra un Redis 7.4 efímero, apuntando a él en lugar del servidor del autor.
+- **Fuera `fvbock/endless`** (abandonado desde 2017). `http/run.go` usa un `http.Server` estándar en todas las
+  plataformas:
+  - `ReadHeaderTimeout` de 10 s, contra conexiones lentas tipo slowloris; antes no había ningún timeout;
+  - `IdleTimeout` de 120 s y `MaxHeaderBytes` de 1 MiB;
+  - apagado ordenado con SIGINT/SIGTERM: `docker stop` tarda 0.1 s en lugar de esperar a que Docker lo mate.
+- `/api/admin/address_book/shareByWebClient` solo existe con `web-client: 1`, igual que `/api/shared-peer`. Antes
+  cualquier usuario con sesión podía crear enlaces del cliente web aunque estuviera apagado.
+- **Imagen sin root**: corre como `rustdesk` (1000:1000).
+  - El volumen `/app/data` y su `rustdeskapi.db` deben ser de 1000:1000. Para un servidor nuevo:
+    `install -d -o 1000 -g 1000 /ruta/datos/api`.
+  - Con datos creados por una versión anterior (root), antes de cambiar: `chown -R 1000:1000 /ruta/datos/api`.
+  - **Monta solo la llave pública** en el contenedor de la API (`…/id_ed25519.pub:/keys/id_ed25519.pub:ro`), no la
+    carpeta de hbbs: ahí también está la llave privada, y la API no la necesita.
+- `go vet` (Linux y Windows), pruebas y govulncheck: OK, 0 alcanzables.
+- Mismas 16 sondas que en la `.1` sobre una copia de la base, con la misma respuesta. Además,
+  `shareByWebClient` → 404.
+
+**Consola** (adbeels/rustdesk-api-web `cb0eb51`; detalle en su `MANTENIMIENTO.md`)
+- Fuera todo lo del cliente web: utilidades, diálogo y botones para compartir.
+  - Ya no se copia el token del admin a `wc-option:local:access_token` en `localStorage`. Antes quedaba ahí
+    incluso después de cerrar sesión.
+  - Fuera `protobufjs`, `long` y `ts-proto`.
+- `@element-plus/icons` → `@element-plus/icons-vue`.
+- `vite.config.js` → `vite.config.mjs`.
+- `npm audit`: 0.
