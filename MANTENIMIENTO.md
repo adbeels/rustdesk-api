@@ -209,3 +209,18 @@ no importa ese paquete y solo aparece porque el módulo `x/crypto` está en el g
 - `@element-plus/icons` → `@element-plus/icons-vue`.
 - `vite.config.js` → `vite.config.mjs`.
 - `npm audit`: 0.
+
+**Publicación y prueba (`v2.7-adbeels.3`)**
+- Imagen `ghcr.io/adbeels/rustdesk-api:v2.7-adbeels.3`, digest
+  `sha256:28a042271007c8efe096b43723cd9daf77ca55eb5a00eef009027f20bd2fa6dd`.
+- Primero se probó la imagen sobre una copia de los datos, sin red:
+  - corre como uid 1000;
+  - `/app/data` y `runtime` escribibles, `conf` de solo lectura;
+  - solo la `.pub` montada.
+- 19:54: desplegada en el ambiente de pruebas, con respaldo previo. En el compose se cambió también el montaje de
+  la llave, para montar solo la `.pub`.
+- Verificado:
+  - latido escrito por el proceso sin root;
+  - logs limpios;
+  - consola con iconos y llave, sin botones del cliente web;
+  - libreta compartida y conexión desde el cliente 1.5.0.
