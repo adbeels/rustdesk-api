@@ -1,5 +1,8 @@
 # RustDesk API
 
+> **adbeels 维护的分支**，源自 [lejianwen/rustdesk-api](https://github.com/lejianwen/rustdesk-api)（MIT，感谢 lejianwen）。
+> 更新了 Go 与依赖，不含 Web 客户端。镜像与变更记录见 [MANTENIMIENTO.md](MANTENIMIENTO.md)。
+
 [English Doc](README_EN.md)
 
 本项目使用 Go 实现了 RustDesk 的 API，并包含了 Web Admin 和 Web 客户端。

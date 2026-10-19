@@ -1,0 +1,61 @@
+# Fork adbeels: revisa (vet, pruebas, govulncheck) y publica la imagen en GHCR.
+# Se dispara solo con etiquetas del fork, p. ej. v2.7-adbeels.1 → ghcr.io/adbeels/rustdesk-api:v2.7-adbeels.1
+# Nunca publica `latest`. Acciones fijadas por SHA. Ver MANTENIMIENTO.md.
+name: Imagen
+
+on:
+  push:
+    tags:
+      - 'v*-adbeels.*'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  revisar:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: go vet
+        run: go vet ./...
+      - name: Pruebas
+        # Las de Redis apuntan a un servidor del autor original (192.168.1.168): se omiten
+        run: go test -skip Redis ./...
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+          "$(go env GOPATH)/bin/govulncheck" ./...
+
+  imagen:
+    # En PR y a mano solo construye (valida el Dockerfile); publica únicamente con etiqueta
+    needs: revisar
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Construir y publicar
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Dockerfile.adbeels
+          platforms: linux/amd64
+          push: ${{ startsWith(github.ref, 'refs/tags/') }}
+          provenance: mode=max
+          sbom: true
+          build-args: |
+            VERSION=${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'ci' }}
+          tags: ghcr.io/${{ github.repository_owner }}/rustdesk-api:${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'ci' }}

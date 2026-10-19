@@ -1,5 +1,9 @@
 # RustDesk API
 
+> **Fork maintained by adbeels** of [lejianwen/rustdesk-api](https://github.com/lejianwen/rustdesk-api) (MIT, all credit to lejianwen).
+> Updated Go toolchain and dependencies, no web client (removed upstream after a DMCA notice).
+> Image: `ghcr.io/adbeels/rustdesk-api:<vX.Y-adbeels.N>` (never `latest`). Changes and vulnerability scans: [MANTENIMIENTO.md](MANTENIMIENTO.md).
+
 This project implements the RustDesk API using Go, and includes both a web UI and web client. RustDesk is a remote
 desktop software that provides self-hosted solutions.
 

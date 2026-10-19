@@ -1,0 +1,48 @@
+# Imagen del fork adbeels/rustdesk-api (basado en lejianwen/rustdesk-api, MIT).
+# Se construye todo aquí (consola + API), sin binarios precompilados ni toolchains de terceros.
+# Imágenes base fijadas por versión y digest; la consola, por commit. Ver MANTENIMIENTO.md.
+#
+#   docker build -f Dockerfile.adbeels --build-arg VERSION=v2.7-adbeels.1 -t rustdesk-api:prueba .
+
+# --- Consola web (fork adbeels/rustdesk-api-web, ver su MANTENIMIENTO.md) ----
+FROM node:24.22.0-alpine3.24@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed4a8602e937f AS consola
+ARG WEB_REPO=https://github.com/adbeels/rustdesk-api-web.git
+# Dependencias al día (npm audit 0). La de la v2.7 oficial era lejianwen 3998c2a9213f
+ARG WEB_COMMIT=18e92cdde10c4c25e34ba6de53ac65bf5969f69f
+RUN apk add --no-cache git
+WORKDIR /web
+RUN git init -q \
+ && git remote add origin "$WEB_REPO" \
+ && git fetch -q --depth 1 origin "$WEB_COMMIT" \
+ && git checkout -q FETCH_HEAD
+# npm ci: respeta package-lock.json; sin scripts de instalación (no hacen falta para el build)
+RUN npm ci --ignore-scripts --no-audit --no-fund && npm run build
+
+# --- API (Go, CGO por sqlite, enlazado estático con musl) --------------------
+FROM golang:1.27.2-alpine3.24@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d AS api
+RUN apk add --no-cache build-base
+WORKDIR /src
+ENV GOTOOLCHAIN=local CGO_ENABLED=1
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
+COPY . .
+ARG VERSION=dev
+RUN go build -trimpath -ldflags "-s -w -linkmode external -extldflags -static" -o /release/apimain ./cmd/apimain.go \
+ && mkdir -p /release/data /release/runtime \
+ && cp -r resources docs conf /release/ \
+ # El cliente web quedó fuera del proyecto por DMCA: no se incluye en la imagen
+ && rm -rf /release/resources/web /release/resources/web2 \
+ && echo "$VERSION" > /release/resources/version
+COPY --from=consola /web/dist /release/resources/admin
+
+# --- Imagen final ------------------------------------------------------------
+FROM alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+LABEL org.opencontainers.image.source="https://github.com/adbeels/rustdesk-api" \
+      org.opencontainers.image.description="RustDesk API + consola (fork mantenido de lejianwen/rustdesk-api)" \
+      org.opencontainers.image.licenses="MIT"
+RUN apk add --no-cache tzdata
+WORKDIR /app
+COPY --from=api /release /app/
+VOLUME /app/data
+EXPOSE 21114
+CMD ["./apimain"]
