@@ -4,19 +4,19 @@
 #
 #   docker build -f Dockerfile.adbeels --build-arg VERSION=v2.7-adbeels.1 -t rustdesk-api:prueba .
 
-# --- Consola web (lejianwen/rustdesk-api-web) --------------------------------
+# --- Consola web (fork adbeels/rustdesk-api-web, ver su MANTENIMIENTO.md) ----
 FROM node:24.22.0-alpine3.24@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed4a8602e937f AS consola
-ARG WEB_REPO=https://github.com/lejianwen/rustdesk-api-web.git
-# Último commit de master (2025-08-31): el que trae la imagen oficial v2.7
-ARG WEB_COMMIT=3998c2a9213fcd047252776d0f0db33e6717026c
+ARG WEB_REPO=https://github.com/adbeels/rustdesk-api-web.git
+# Dependencias al día (npm audit 0). La de la v2.7 oficial era lejianwen 3998c2a9213f
+ARG WEB_COMMIT=18e92cdde10c4c25e34ba6de53ac65bf5969f69f
 RUN apk add --no-cache git
 WORKDIR /web
 RUN git init -q \
  && git remote add origin "$WEB_REPO" \
  && git fetch -q --depth 1 origin "$WEB_COMMIT" \
  && git checkout -q FETCH_HEAD
-# npm ci: respeta package-lock.json
-RUN npm ci --no-audit --no-fund && npm run build
+# npm ci: respeta package-lock.json; sin scripts de instalación (no hacen falta para el build)
+RUN npm ci --ignore-scripts --no-audit --no-fund && npm run build
 
 # --- API (Go, CGO por sqlite, enlazado estático con musl) --------------------
 FROM golang:1.27.2-alpine3.24@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d AS api

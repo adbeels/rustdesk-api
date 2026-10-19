@@ -15,7 +15,7 @@ Reglas del fork:
 | Pieza | Dónde |
 |---|---|
 | Imagen | `Dockerfile.adbeels`: multietapa, construye la consola y la API; bases fijadas por versión y digest |
-| Consola web | `lejianwen/rustdesk-api-web`, commit `3998c2a9213f` (2025-08-31), el mismo que trae la v2.7 oficial (`npm ci`) |
+| Consola web | Fork [adbeels/rustdesk-api-web](https://github.com/adbeels/rustdesk-api-web), fijado por commit en `WEB_COMMIT` (`npm ci --ignore-scripts`). Hasta `v2.7-adbeels.1` era `lejianwen/rustdesk-api-web` `3998c2a9213f`, el mismo de la v2.7 oficial |
 | CI | `.github/workflows/imagen.yml`: `go vet`, pruebas, `govulncheck` (si encuentra algo, no publica) y la imagen |
 | Publicar | `git tag v2.7-adbeels.N && git push origin v2.7-adbeels.N` → `ghcr.io/adbeels/rustdesk-api:v2.7-adbeels.N` |
 
