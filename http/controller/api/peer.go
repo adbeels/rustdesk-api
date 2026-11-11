@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
+	"github.com/lejianwen/rustdesk-api/v2/global"
 	requstform "github.com/lejianwen/rustdesk-api/v2/http/request/api"
 	"github.com/lejianwen/rustdesk-api/v2/http/response"
 	"github.com/lejianwen/rustdesk-api/v2/service"
@@ -30,6 +31,11 @@ func (p *Peer) SysInfo(c *gin.Context) {
 		response.Error(c, response.TranslateMsg(c, "ParamsError")+err.Error())
 		return
 	}
+	// Fork adbeels: este endpoint no pide sesión; sin id o uuid no hay a quién atribuir los datos
+	if f.Id == "" || f.Uuid == "" {
+		response.Error(c, response.TranslateMsg(c, "ParamsError"))
+		return
+	}
 	fpe := f.ToPeer()
 	pe := service.AllService.PeerService.FindById(f.Id)
 	if pe.RowId == 0 {
@@ -41,6 +47,13 @@ func (p *Peer) SysInfo(c *gin.Context) {
 			return
 		}
 	} else {
+		// Fork adbeels: el uuid es lo único que distingue al equipo dueño del id de cualquier otro emisor.
+		// Si el id ya tiene un uuid registrado y no coincide, no se sobrescribe nada.
+		if pe.Uuid != "" && pe.Uuid != f.Uuid {
+			global.Logger.Warn(fmt.Sprintf("SysInfo rejected: uuid mismatch for id %q from %s", f.Id, c.ClientIP()))
+			c.String(http.StatusOK, "UUID_MISMATCH")
+			return
+		}
 		if pe.UserId == 0 {
 			pe.UserId = service.AllService.UserService.FindLatestUserIdFromLoginLogByUuid(pe.Uuid, pe.Id)
 		}

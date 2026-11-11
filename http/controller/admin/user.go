@@ -297,7 +297,11 @@ func (ct *User) MyOauth(c *gin.Context) {
 // groupUsers
 func (ct *User) GroupUsers(c *gin.Context) {
 	aG := service.AllService.GroupService.List(1, 999, nil)
-	aU := service.AllService.UserService.List(1, 9999, nil)
+	// Fork adbeels: lo llama cualquier usuario con sesión para elegir a quién compartir;
+	// antes devolvía la ficha completa de todos (correo, si es admin, notas)
+	aU := service.AllService.UserService.List(1, 9999, func(tx *gorm.DB) {
+		tx.Select("id, username, group_id")
+	})
 	response.Success(c, gin.H{
 		"groups": aG.Groups,
 		"users":  aU.Users,

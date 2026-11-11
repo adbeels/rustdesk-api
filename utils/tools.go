@@ -3,6 +3,7 @@ package utils
 import (
 	"crypto/md5"
 	crand "crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -77,6 +78,16 @@ func RandomString(n int) string {
 		b[i] = letterBytes[int(rb)%length]
 	}
 	return string(b)
+}
+
+// RandomToken 生成会话token: 32字节 crypto/rand, 十六进制 (64个字符)
+func RandomToken() string {
+	b := make([]byte, 32)
+	if _, err := crand.Read(b); err != nil {
+		// Sin azar seguro no se emite ningún token; gin.Recovery responde 500
+		panic(err)
+	}
+	return hex.EncodeToString(b)
 }
 
 // Keys 泛型函数，K 是键类型，V 是值类型

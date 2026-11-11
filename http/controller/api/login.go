@@ -105,7 +105,9 @@ func (l *Login) LoginOptions(c *gin.Context) {
 	if global.Config.App.WebSso {
 		ops = append(ops, model.OauthTypeWebauth)
 	}
-	var oidcItems []map[string]string
+	// El cliente RustDesk decodifica common-oidc/ como lista: con web-sso apagado y sin proveedores
+	// salía "null" y el cliente fallaba al leerlo (mismo arreglo que alonginwind/rustdesk-api 077bd11)
+	oidcItems := make([]map[string]string, 0, len(ops))
 	for _, v := range ops {
 		oidcItems = append(oidcItems, map[string]string{"name": v})
 	}

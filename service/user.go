@@ -90,7 +90,8 @@ func (us *UserService) GenerateToken(u *model.User) string {
 	if len(Jwt.Key) > 0 {
 		return Jwt.GenerateToken(u.Id)
 	}
-	return utils.Md5(u.Username + time.Now().String())
+	// Fork adbeels: antes era md5(usuario + hora), que se puede reconstruir; ahora sale de crypto/rand
+	return utils.RandomToken()
 }
 
 // Login 登录
@@ -204,6 +205,16 @@ func (us *UserService) Logout(u *model.User, token string) error {
 		AllService.PeerService.UuidUnbindUserId(uuid, u.Id)
 	}
 	return nil
+}
+
+// LogoutByToken 仅凭token退出登录, 供没有经过鉴权中间件的路由使用; token不存在时什么都不做
+func (us *UserService) LogoutByToken(token string) error {
+	ut := &model.UserToken{}
+	DB.Where("token = ?", token).First(ut)
+	if ut.Id == 0 {
+		return nil
+	}
+	return us.Logout(&model.User{IdModel: model.IdModel{Id: ut.UserId}}, token)
 }
 
 // Delete 删除用户和oauth信息

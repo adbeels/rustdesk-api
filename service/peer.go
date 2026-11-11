@@ -19,6 +19,23 @@ func (ps *PeerService) FindByUuid(uuid string) *model.Peer {
 	DB.Where("uuid = ?", uuid).First(p)
 	return p
 }
+
+// FindReporter 校验上报方。sysinfo / heartbeat / audit 不需要登录, 只凭设备 id 就能写入,
+// 所以用 uuid 区分设备本身和其他来源: 设备不存在, 或已登记的 uuid 与上报的不一致时返回 false。
+func (ps *PeerService) FindReporter(id string, uuid string) (*model.Peer, bool) {
+	if id == "" || uuid == "" {
+		return &model.Peer{}, false
+	}
+	p := ps.FindById(id)
+	if p.RowId == 0 {
+		return p, false
+	}
+	if p.Uuid != "" && p.Uuid != uuid {
+		return p, false
+	}
+	return p, true
+}
+
 func (ps *PeerService) InfoByRowId(id uint) *model.Peer {
 	p := &model.Peer{}
 	DB.Where("row_id = ?", id).First(p)

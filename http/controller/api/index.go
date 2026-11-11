@@ -45,12 +45,9 @@ func (i *Index) Heartbeat(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{})
 		return
 	}
-	if info.Uuid == "" {
-		c.JSON(http.StatusOK, gin.H{})
-		return
-	}
-	peer := service.AllService.PeerService.FindById(info.Id)
-	if peer == nil || peer.RowId == 0 {
+	// Fork adbeels: sin sesión, solo el equipo que registró este id (mismo uuid) lo marca en línea
+	peer, ok := service.AllService.PeerService.FindReporter(info.Id, info.Uuid)
+	if !ok {
 		c.JSON(http.StatusOK, gin.H{})
 		return
 	}
