@@ -16,7 +16,7 @@ Reglas del fork:
 |---|---|
 | Imagen | `Dockerfile.adbeels`: multietapa, construye la consola y la API; bases fijadas por versión y digest |
 | Consola web | Fork [adbeels/rustdesk-api-web](https://github.com/adbeels/rustdesk-api-web), fijado por commit en `WEB_COMMIT` (`npm ci --ignore-scripts`). Hasta `v2.7-adbeels.1` era `lejianwen/rustdesk-api-web` `3998c2a9213f`, el mismo de la v2.7 oficial |
-| CI | `.github/workflows/imagen.yml`: `go vet`, pruebas, `govulncheck` (si encuentra algo, no publica) y la imagen |
+| CI | `.github/workflows/imagen.yml`: `go vet`, pruebas, `govulncheck` (si encuentra algo, no publica) y la imagen. Además corre cada lunes solo la revisión: si sale una vulnerabilidad nueva, falla y GitHub avisa por correo |
 | Publicar | `git tag v2.7-adbeels.N && git push origin v2.7-adbeels.N` → `ghcr.io/adbeels/rustdesk-api:v2.7-adbeels.N` |
 
 - En PR y a mano (`workflow_dispatch`) el workflow construye la imagen pero **no la publica**.
@@ -29,8 +29,11 @@ Reglas del fork:
 **Para medir localmente sin Go instalado** (en pos-server, contenedor efímero; revisa antes `srv quien` y la RAM):
 
 ```bash
-docker run --rm -v "$PWD":/src -w /src golang:1.27.2-bookworm sh -c 'go install golang.org/x/vuln/cmd/govulncheck@v1.9.0 && /go/bin/govulncheck ./...'
+docker run --rm -e GOTOOLCHAIN=auto -v "$PWD":/src -w /src golang:1.27.2-bookworm sh -c 'go install golang.org/x/vuln/cmd/govulncheck@v1.9.0 && /go/bin/govulncheck ./...'
 ```
+
+`GOTOOLCHAIN=auto` hace que se use la versión de Go que fija `go.mod` (la misma del Dockerfile y del CI). Sin eso,
+la imagen `golang` usa la suya y govulncheck mediría la librería estándar de otra versión.
 
 ## 2026-10-18 · Línea base y primera actualización (`v2.7-adbeels.1`)
 
@@ -41,14 +44,18 @@ Herramientas: govulncheck v1.9.0, base de vulnerabilidades del 2026-10-08. Conte
 
 Se midió de dos formas:
 - **Modo binario**: sobre el `apimain` de la imagen oficial `lejianwen/rustdesk-api:v2.7`, que es lo que corre
-  hoy en pruebas. Cuenta todo símbolo vulnerable presente en el binario, se llame o no.
+  hoy en pruebas. Ese binario va sin símbolos (`-s -w`), así que govulncheck no puede saber qué se llama: cuenta
+  todas las vulnerabilidades conocidas de los módulos y de la versión de Go que trae dentro.
 - **Modo fuente**: sobre el código de v2.7 con su toolchain original (go1.23.12). Solo cuenta lo que el código
   **sí llama**, según el grafo de llamadas.
 
-| Origen | Go | Vulnerabilidades alcanzables | Solo importadas o requeridas |
+| Origen | Go | Vulnerabilidades | Solo importadas o requeridas |
 |---|---|---|---|
-| Binario de la imagen v2.7 | go1.23.12 | **110** | — |
-| Código v2.7 (fuente) | go1.23.12 | **55** | 57 |
+| Binario de la imagen v2.7 | go1.23.12 | **110** presentes en sus módulos | — |
+| Código v2.7 (fuente) | go1.23.12 | **55** alcanzables | 57 |
+
+> Corrección del 2026-11-11: esta tabla decía «110 alcanzables» para el binario. Alcanzables desde el código eran
+> 55; las 110 son las que venían dentro del binario, se llamaran o no.
 
 **Por módulo:**
 
@@ -144,7 +151,9 @@ no importa ese paquete y solo aparece porque el módulo `x/crypto` está en el g
 ### Publicación y prueba en el ambiente
 
 - Imagen `ghcr.io/adbeels/rustdesk-api:v2.7-adbeels.1`, digest
-  `sha256:a9c11a59c699a3f26c4afefc10145d5e10348ca77cf5cc6146eb33a3ccc42be9`. Pesa ~25 MB; la oficial v2.7, 99 MB.
+  `sha256:a9c11a59c699a3f26c4afefc10145d5e10348ca77cf5cc6146eb33a3ccc42be9`. Pesa ~25 MB comprimida.
+  - Corrección del 2026-11-11: aquí decía «la oficial v2.7, 99 MB», y comparaba comprimido con desempaquetado.
+    Las dos pesan lo mismo: ~26 MB comprimidas y ~99 MB desempaquetadas.
 - 2026-10-18 18:40: desplegada en el ambiente de pruebas (pos-server, `rustdesk-pruebas`) en lugar de la v2.7,
   con respaldo previo.
 - Verificado:
@@ -273,3 +282,92 @@ no importa ese paquete y solo aparece porque el módulo `x/crypto` está en el g
   - el admin recorrió el menú (todos los iconos), dispositivos, libretas y reglas, usuarios, auditoría e idioma,
     sin «Registros compartidos»;
   - libreta compartida y conexión desde el cliente 1.5.0.
+
+## 2026-11-11 · Ronda 4: seguridad (`v2.7-adbeels.5`)
+
+Sale de una revisión de seguridad de todo el proyecto hecha el 2026-11-10 sobre `v2.7-adbeels.4`: lectura del
+código (sesiones, permisos, entradas sin autenticación) y comprobación de cada punto en un contenedor efímero.
+Los fallos venían del código heredado, no de las dependencias. Todos quedaron cubiertos por pruebas automáticas
+(`http/security_test.go`) que corren en el CI.
+
+### Qué se corrigió
+
+1. **Comandos al servidor solo para administradores.** `/api/admin/rustdesk/{sendCmd,cmdList,cmdCreate,cmdDelete}`
+   no pedían `AdminPrivilege`: cualquier usuario con sesión podía mandar comandos al puerto de administración
+   local de hbbs y hbbr (`relay-servers`, `must-login`, `ip-blocker`, `blacklist-add`, `total-bandwidth`…).
+2. **El límite de intentos ya no confía en cabeceras.** Con `gin.trust-proxy` vacío, gin aceptaba
+   `X-Forwarded-For` y `X-Real-IP` de cualquiera. Como el bloqueo por intentos fallidos va por IP, se podía evadir
+   cambiando la cabecera, o bloquear la IP de otro. Ahora, sin `trust-proxy`, la IP del cliente es la de la conexión.
+3. **Token de sesión aleatorio.** Era `md5(usuario + hora)`, y `/api/sysinfo_ver` publica la hora de arranque.
+   Ahora son 32 bytes de `crypto/rand` (64 hexadecimales). Los tokens ya emitidos siguen valiendo hasta caducar.
+4. **Cerrar sesión en la consola invalida el token.** `POST /api/admin/logout` está fuera del middleware de
+   sesión y su controlador buscaba el token en el contexto, donde nunca estaba. Ahora lo toma de la cabecera y lo
+   borra. La consola, además, no llamaba a esa ruta (arreglado en adbeels/rustdesk-api-web).
+5. **Inventario y auditoría: solo reporta el equipo dueño del ID.** `/api/sysinfo`, `/api/heartbeat` y
+   `/api/audit/*` no piden sesión (así funciona el cliente). Antes, conociendo un ID, cualquiera podía
+   sobrescribir los datos de ese equipo, incluido su uuid, e inventar o alterar registros de auditoría.
+   - Ahora, si el ID ya tiene un uuid registrado, solo se aceptan datos que traigan ese mismo uuid.
+   - `sysinfo` con otro uuid responde `UUID_MISMATCH` y no cambia nada; latidos y auditorías se ignoran.
+   - Las auditorías de un ID que la API no conoce también se ignoran.
+   - Cada rechazo deja un aviso en el log con el ID y la IP.
+   - Comprobado con datos reales del cliente 1.5.0: latidos, auditorías y logins traen el mismo uuid del alta.
+6. **Límite de tamaño de las peticiones.** No había: 100 MB sin autenticar subían la memoria del proceso de 69 a
+   311 MB. Ahora el máximo es `gin.max-body-size` (4 MiB por omisión): con `Content-Length` mayor responde 413 sin
+   leer, y sin `Content-Length` corta al pasar el límite. El servidor tiene además `ReadTimeout` de 30 s y
+   `WriteTimeout` de 60 s.
+7. **La autorización web se puede apagar de verdad.** Es el inicio de sesión del cliente confirmando desde la
+   consola: quien inicia el flujo recibe la sesión de quien pulse «Confirmar» en el enlace.
+   - `app.web-sso: false` solo lo ocultaba en el cliente; ahora el flujo no se puede iniciar ni confirmar.
+   - La confirmación desde la consola ya no vale para códigos de otros proveedores.
+   - Se guarda la IP de quien inicia el flujo y la consola la muestra antes de confirmar.
+   - Con `web-sso` apagado y sin proveedores, `login-options` devolvía `common-oidc/null` y el cliente fallaba
+     al leerlo; ahora devuelve una lista vacía (mismo arreglo que alonginwind/rustdesk-api `077bd11`).
+
+**Menores, en el mismo paquete:**
+- `/api/admin/user/groupUsers` lo usa cualquier usuario para elegir a quién compartir una libreta, y devolvía la
+  ficha completa de todos (correo, quién es administrador, notas). Ahora solo `id`, `username` y `group_id`.
+- `/_admin/` y `/upload/` ya no listan el contenido de sus carpetas.
+- Cabeceras `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  `Content-Security-Policy: frame-ancestors 'none'` y `Referrer-Policy: same-origin` en todas las respuestas.
+
+### Qué cambia para quien despliega
+
+- **Detrás de un proxy inverso hay que poner `RUSTDESK_API_GIN_TRUST_PROXY`** con la IP del proxy. Si no, todos
+  los clientes llegan con la IP del proxy y diez contraseñas fallidas bloquean a todos.
+- **Un equipo nuevo que reutiliza el ID de otro** no puede actualizar sus datos hasta que se borre el equipo
+  anterior en la consola. El aviso `SysInfo rejected: uuid mismatch` en el log lo delata.
+- Peticiones de más de 4 MiB se rechazan. Se ajusta con `RUSTDESK_API_GIN_MAX_BODY_SIZE` (en bytes).
+- Si los técnicos entran con usuario y contraseña, conviene `RUSTDESK_API_APP_WEB_SSO=false`.
+
+### Mantenimiento
+
+- **Go 1.27.2 → 1.27.4** (`toolchain go1.27.4`). Con la base del 2026-11-11, govulncheck marcaba en la `.4` dos
+  vulnerabilidades alcanzables de la librería estándar (GO-2026-6859 y GO-2026-6809) y dos sin llamar en
+  `x/net`. Después: **0 alcanzables**; queda el aviso informativo de `x/crypto/openpgp`, que no tiene arreglo.
+- Dependencias: `x/net` v0.62.0, `x/text` v0.44.0, `x/oauth2` v0.38.0, validator v10.30.6, go-i18n v2.7.0.
+- Imágenes base: `golang:1.27.4-alpine3.24`, `alpine:3.24.4`, `node:24.22.2-alpine3.24`, por digest.
+- Consola: commit `71d1e34` (cierre de sesión contra el servidor, IP en la confirmación, `npm audit` 0).
+- **Revisión semanal.** Se dijo en octubre que Dependabot abriría PR cada semana. No ocurre: GitHub no activa
+  Dependabot en forks, y en tres semanas nadie avisó de las vulnerabilidades nuevas. Ahora `imagen.yml` corre
+  cada lunes `go vet`, las pruebas y govulncheck.
+
+### Pruebas
+
+- `go vet` (Linux y Windows) y `go test -skip Redis ./...`: OK.
+- `http/security_test.go`, 11 pruebas sobre el motor real con una base temporal:
+  - recorre **todas** las rutas de `/api/admin` sin sesión y con un usuario no administrador; una ruta nueva sin
+    clasificar hace fallar la prueba;
+  - logout, token, cabeceras de proxy, uuid en sysinfo, latido y auditoría, autorización web, límite de cuerpo,
+    cabeceras, listado de carpetas y `groupUsers`.
+  - Se comprobó que detectan lo que dicen: al quitar a propósito cuatro de los arreglos, fallaron justo esas.
+- Laboratorio: las siete comprobaciones que daban positivo en la `.4` dieron negativo, y lo legítimo siguió
+  funcionando (cliente con su uuid, sesión de consola y de cliente, proxy de confianza configurado).
+
+### Pendiente (no se hizo en esta ronda)
+
+- Los tokens se guardan en claro en la base, y `/api/admin/user_token/list` se los devuelve al administrador.
+- Contraseñas válidas desde 4 caracteres y sin segundo factor (upstream tampoco lo tiene).
+- El login del cliente (`/api/login`) no puede pedir captcha; solo lo protege el bloqueo por IP.
+- Dar de alta equipos sigue sin pedir autenticación (es el protocolo del cliente): contra una avalancha de altas
+  falsas, el límite de peticiones va en el proxy inverso.
+- sqlite sin WAL (ver la nota de la ronda 1).
