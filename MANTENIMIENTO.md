@@ -363,6 +363,25 @@ Los fallos venían del código heredado, no de las dependencias. Todos quedaron 
 - Laboratorio: las siete comprobaciones que daban positivo en la `.4` dieron negativo, y lo legítimo siguió
   funcionando (cliente con su uuid, sesión de consola y de cliente, proxy de confianza configurado).
 
+### Publicación y prueba (`v2.7-adbeels.5`)
+
+- Imagen `ghcr.io/adbeels/rustdesk-api:v2.7-adbeels.5`, digest
+  `sha256:2a8b57aa1b9f89dda2ea10d158fe2759699611ab1861079701feae0e0fb322b4`. Binario con Go 1.27.4.
+- Antes de desplegar se repitió el laboratorio completo sobre la imagen publicada (sin red, base vacía):
+  - los siete puntos corregidos, cerrados;
+  - 100 MB con y sin `Content-Length`: 413 y 400 en milisegundos, con la memoria sin moverse;
+  - con `trust-proxy=127.0.0.1` (caso nginx) el bloqueo se aplica por cliente, como debe;
+  - `max-body-size` y `web-sso=false` funcionan por variable de entorno.
+- 2026-11-11 00:24: desplegada en el ambiente de pruebas, con respaldo previo. En el compose se agregó un tope de
+  memoria y de tamaño de logs al contenedor, y la base quedó con permisos 600.
+- Verificado en el ambiente:
+  - el cliente RustDesk 1.5.0 que corre en el servidor mandó su latido y la API lo aceptó con la validación de
+    uuid, sin avisos de rechazo;
+  - consola: vistas, comandos del servidor (como administrador) y cierre de sesión. Tras pulsar «Cerrar sesión»
+    en el navegador, el token dejó de existir en la base;
+  - log sin errores.
+- Queda un paquete de Alpine con versión más nueva en su repositorio (`zlib`). El binario es estático y no lo usa.
+
 ### Pendiente (no se hizo en esta ronda)
 
 - Los tokens se guardan en claro en la base, y `/api/admin/user_token/list` se los devuelve al administrador.
