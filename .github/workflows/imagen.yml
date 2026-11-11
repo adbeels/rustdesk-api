@@ -1,6 +1,7 @@
 # Fork adbeels: revisa (vet, pruebas, govulncheck) y publica la imagen en GHCR.
-# Se dispara solo con etiquetas del fork, p. ej. v2.7-adbeels.1 → ghcr.io/adbeels/rustdesk-api:v2.7-adbeels.1
+# Publica solo con etiquetas del fork, p. ej. v2.7-adbeels.1 → ghcr.io/adbeels/rustdesk-api:v2.7-adbeels.1
 # Nunca publica `latest`. Acciones fijadas por SHA. Ver MANTENIMIENTO.md.
+# La corrida semanal solo revisa: si govulncheck encuentra algo nuevo, falla y GitHub manda correo.
 name: Imagen
 
 on:
@@ -9,6 +10,8 @@ on:
       - 'v*-adbeels.*'
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: '47 12 * * 1' # lunes 12:47 UTC
 
 permissions:
   contents: read
@@ -34,6 +37,7 @@ jobs:
   imagen:
     # En PR y a mano solo construye (valida el Dockerfile); publica únicamente con etiqueta
     needs: revisar
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-24.04
     permissions:
       contents: read

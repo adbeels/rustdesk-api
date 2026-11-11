@@ -49,6 +49,7 @@ type OauthCacheItem struct {
 	Email      string `json:"email"`
 	Verifier   string `json:"verifier"` // used for oauth pkce
 	Nonce      string `json:"nonce"`
+	Ip         string `json:"ip"` // IP de quien inició el flujo; la consola la muestra antes de confirmar
 }
 
 func (oci *OauthCacheItem) ToOauthUser() *model.OauthUser {
@@ -100,6 +101,10 @@ func (os *OauthService) BeginAuth(op string) (error error, state, verifier, nonc
 	verifier = ""
 	nonce = ""
 	if op == model.OauthTypeWebauth {
+		// Fork adbeels: web-sso=false solo ocultaba la opción en el cliente; el flujo seguía disponible
+		if !Config.App.WebSso {
+			return errors.New("ConfigNotFound"), state, verifier, nonce, url
+		}
 		url = Config.Rustdesk.ApiServer + "/_admin/#/oauth/" + state
 		//url = "http://localhost:8888/_admin/#/oauth/" + code
 		return nil, state, verifier, nonce, url

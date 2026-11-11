@@ -8,6 +8,7 @@ import (
 	"github.com/lejianwen/rustdesk-api/v2/http/request/admin"
 	adminReq "github.com/lejianwen/rustdesk-api/v2/http/request/admin"
 	"github.com/lejianwen/rustdesk-api/v2/http/response"
+	"github.com/lejianwen/rustdesk-api/v2/model"
 	"github.com/lejianwen/rustdesk-api/v2/service"
 )
 
@@ -79,6 +80,12 @@ func (o *Oauth) Confirm(c *gin.Context) {
 	v := service.AllService.OauthService.GetOauthCache(j.Code)
 	if v == nil {
 		response.Fail(c, 101, response.TranslateMsg(c, "OauthExpired"))
+		return
+	}
+	// Fork adbeels: confirmar desde la consola es el flujo webauth; no vale para códigos de otros
+	// proveedores ni cuando web-sso está apagado
+	if v.Op != model.OauthTypeWebauth || !global.Config.App.WebSso {
+		response.Fail(c, 101, response.TranslateMsg(c, "ParamsError"))
 		return
 	}
 	u := service.AllService.UserService.CurUser(c)

@@ -52,6 +52,7 @@ func (o *Oauth) OidcAuth(c *gin.Context) {
 		DeviceType: f.DeviceInfo.Type,
 		Verifier:   verifier,
 		Nonce:      nonce,
+		Ip:         c.ClientIP(),
 	}, 5*60)
 	//fmt.Println("code url", code, url)
 	c.JSON(http.StatusOK, gin.H{

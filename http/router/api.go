@@ -8,7 +8,6 @@ import (
 	"github.com/lejianwen/rustdesk-api/v2/http/middleware"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"net/http"
 )
 
 func ApiInit(g *gin.Engine) {
@@ -97,7 +96,7 @@ func ApiInit(g *gin.Engine) {
 
 	PersonalRoutes(frg)
 	//访问静态文件
-	g.StaticFS("/upload", http.Dir(global.Config.Gin.ResourcesPath+"/public/upload"))
+	g.StaticFS("/upload", gin.Dir(global.Config.Gin.ResourcesPath+"/public/upload", false))
 }
 
 func PersonalRoutes(frg *gin.RouterGroup) {

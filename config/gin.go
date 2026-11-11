@@ -6,4 +6,5 @@ type Gin struct {
 	Mode          string
 	ResourcesPath string `mapstructure:"resources-path"`
 	TrustProxy    string `mapstructure:"trust-proxy"`
+	MaxBodySize   int64  `mapstructure:"max-body-size"`
 }

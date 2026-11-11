@@ -139,10 +139,10 @@ func (ct *Login) Captcha(c *gin.Context) {
 // @Failure 500 {object} response.Response
 // @Router /admin/logout [post]
 func (ct *Login) Logout(c *gin.Context) {
-	u := service.AllService.UserService.CurUser(c)
-	token, ok := c.Get("token")
-	if ok {
-		service.AllService.UserService.Logout(u, token.(string))
+	// Fork adbeels: esta ruta no pasa por BackendUserAuth, así que "token" nunca estaba en el contexto
+	// y el token seguía vigente después de cerrar sesión. Quien presenta el token puede invalidarlo.
+	if token := c.GetHeader("api-token"); token != "" {
+		service.AllService.UserService.LogoutByToken(token)
 	}
 	response.Success(c, nil)
 }
@@ -207,6 +207,7 @@ func (ct *Login) OidcAuth(c *gin.Context) {
 		Uuid:     f.Uuid,
 		Verifier: verifier,
 		Nonce:    nonce,
+		Ip:       c.ClientIP(),
 	}, 5*60)
 
 	response.Success(c, gin.H{

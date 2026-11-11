@@ -11,17 +11,25 @@ import (
 )
 
 func ApiInit() {
+	Run(NewEngine(), global.Config.Gin.ApiAddr)
+}
+
+// NewEngine arma el motor con sus middlewares y rutas. Está separado de ApiInit para poder probarlo.
+func NewEngine() *gin.Engine {
 	gin.SetMode(global.Config.Gin.Mode)
 	g := gin.New()
 
-	//[WARNING] You trusted all proxies, this is NOT safe. We recommend you to set a value.
-	//Please check https://pkg.go.dev/github.com/gin-gonic/gin#readme-don-t-trust-all-proxies for details.
-	if global.Config.Gin.TrustProxy != "" {
-		pro := strings.Split(global.Config.Gin.TrustProxy, ",")
-		err := g.SetTrustedProxies(pro)
-		if err != nil {
-			panic(err)
+	// Fork adbeels: sin trust-proxy configurado, gin confía en X-Forwarded-For / X-Real-IP de cualquiera,
+	// y el límite de intentos de login (que va por IP) se puede evadir o usar contra otra IP.
+	// Ahora, si trust-proxy está vacío, no se confía en ningún proxy: la IP del cliente es la de la conexión.
+	var pro []string
+	for _, p := range strings.Split(global.Config.Gin.TrustProxy, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			pro = append(pro, p)
 		}
+	}
+	if err := g.SetTrustedProxies(pro); err != nil {
+		panic(err)
 	}
 
 	if global.Config.Gin.Mode == gin.ReleaseMode {
@@ -33,9 +41,10 @@ func ApiInit() {
 	g.NoRoute(func(c *gin.Context) {
 		c.String(http.StatusNotFound, "404 not found")
 	})
-	g.Use(middleware.Logger(), middleware.Limiter(), gin.Recovery())
+	g.Use(middleware.SecureHeaders(), middleware.BodyLimit(global.Config.Gin.MaxBodySize),
+		middleware.Logger(), middleware.Limiter(), gin.Recovery())
 	router.WebInit(g)
 	router.Init(g)
 	router.ApiInit(g)
-	Run(g, global.Config.Gin.ApiAddr)
+	return g
 }
